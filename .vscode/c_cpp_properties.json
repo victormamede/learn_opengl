@@ -5,7 +5,10 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "${workspaceFolder}/vendor/glfw/include",
-                "${workspaceFolder}/vendor/glad/include"
+                "${workspaceFolder}/vendor/glad/include",
+                "${workspaceFolder}/vendor/stb/include",
+                "${workspaceFolder}/vendor/glm",
+                "${workspaceFolder}/vendor/imgui"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",

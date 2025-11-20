@@ -6,12 +6,14 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 class Shader
 {
 public:
     // the program ID
-    unsigned int ID;
+    GLuint ID;
 
     // constructor reads and builds the shader
     Shader(const char *vertexPath, const char *fragmentPath);
@@ -24,4 +26,5 @@ public:
     void setUniform(const std::string &name, int value) const;
     void setUniform(const std::string &name, float value) const;
     void setUniform(const std::string &name, float x, float y, float z, float w) const;
+    void setUniform(const std::string &name, const glm::mat4 &matrix) const;
 };

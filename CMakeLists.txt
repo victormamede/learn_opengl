@@ -15,8 +15,14 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
 add_subdirectory(vendor/glfw)
-
-# GLAD
 add_subdirectory(vendor/glad)
+add_subdirectory(vendor/stb)
+add_subdirectory(vendor/glm)
+
+# Imgui
+set(IMGUI_PATH  "vendor/imgui")
+file(GLOB IMGUI_SOURCES ${IMGUI_PATH}/*.cpp) 
+add_library(imgui STATIC ${IMGUI_SOURCES})
+target_include_directories(imgui PUBLIC ${IMGUI_PATH})
 
 add_subdirectory(src)

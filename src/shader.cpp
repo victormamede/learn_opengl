@@ -80,6 +80,8 @@ Shader::Shader(const char *vertexPath, const char *fragmentPath)
 
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
+
+    ID = shaderProgram;
 }
 
 void Shader::use()
@@ -102,4 +104,8 @@ void Shader::setUniform(const std::string &name, float value) const
 void Shader::setUniform(const std::string &name, float x, float y, float z, float w) const
 {
     glUniform4f(glGetUniformLocation(ID, name.c_str()), x, y, z, w);
+}
+void Shader::setUniform(const std::string &name, const glm::mat4 &matrix) const
+{
+    glUniformMatrix4fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, glm::value_ptr(matrix));
 }
