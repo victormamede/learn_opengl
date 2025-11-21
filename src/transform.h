@@ -17,4 +17,6 @@ public:
     glm::vec3 forward() const;
     glm::vec3 up() const;
     glm::vec3 right() const;
+
+    void ImGuiDebug();
 };

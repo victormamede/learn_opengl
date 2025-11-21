@@ -15,20 +15,29 @@
 #include "cube.h"
 #include "camera.h"
 
-void framebufferSizeCallback(GLFWwindow *window, int width, int height);
-void processInput(GLFWwindow *window, Camera &camera, float deltaTime);
-void mouse_callback(GLFWwindow *window, double xPos, double yPos);
-void scroll_callback(GLFWwindow *window, double xOffset, double yOffset);
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
+#define SCREEN_HEIGHT 900
+#define SCREEN_WIDTH 1200
 
 struct WindowUserData
 {
     WindowUserData(glm::vec2 &pos, Camera &cam)
-        : camera(cam), hasLastCursorPosition(false) {}
+        : camera(cam), hasLastCursorPosition(false), propertiesShown(false) {}
 
     bool hasLastCursorPosition;
     glm::vec2 lastCursorPosition;
     Camera &camera;
+    bool propertiesShown;
 };
+
+void framebufferSizeCallback(GLFWwindow *window, int width, int height);
+void processInput(GLFWwindow *window, WindowUserData &userData, float deltaTime);
+void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
+void mouse_callback(GLFWwindow *window, double xPos, double yPos);
+void scroll_callback(GLFWwindow *window, double xOffset, double yOffset);
 
 int main()
 {
@@ -39,7 +48,7 @@ int main()
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // Create window
-    GLFWwindow *window = glfwCreateWindow(800, 600, "LearnOpenGL", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "LearnOpenGL", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -55,9 +64,10 @@ int main()
         return -1;
     }
 
-    glViewport(0, 0, 800, 600);
+    glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     glEnable(GL_DEPTH_TEST);
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
+    // Hide cursor
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     Shader shader("./shaders/vertex.vs", "./shaders/fragment.fs");
@@ -98,10 +108,24 @@ int main()
     }
     stbi_image_free(data);
 
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // IF using Docking Branch
+
+    io.IniFilename = nullptr;
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOpenGL(window, true); // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
+    ImGui_ImplOpenGL3_Init();
+
     {
         Cube cube;
         Camera camera{
-            .screenSize = glm::vec2(800.0f, 600.0f),
+            .screenSize = glm::vec2(SCREEN_WIDTH, SCREEN_HEIGHT),
             .fov = 70.0f};
 
         camera.transform.position =
@@ -112,14 +136,13 @@ int main()
         WindowUserData userData(lastCursorPosition, camera);
 
         glfwSetWindowUserPointer(window, &userData);
+
         glfwSetCursorPosCallback(window, mouse_callback);
+        glfwSetKeyCallback(window, key_callback);
         glfwSetScrollCallback(window, scroll_callback);
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         float lastFrame = glfwGetTime();
-
-        glm::quat rotation = glm::angleAxis(glm::radians(90.0f), cube.transform.up());
-        cube.transform.rotation *= rotation;
 
         while (!glfwWindowShouldClose(window))
         {
@@ -129,7 +152,11 @@ int main()
             lastFrame = currentFrame;
 
             glfwPollEvents();
-            processInput(window, camera, deltaTime);
+            processInput(window, userData, deltaTime);
+
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
+            ImGui::NewFrame();
 
             // Render
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -150,10 +177,30 @@ int main()
             shader.setUniform("model", cube.transform.getMatrix());
             cube.draw();
 
+            ImGui::SetNextWindowSizeConstraints(ImVec2(300.0f, 200.0f), ImVec2(FLT_MAX, FLT_MAX));
+            if (ImGui::Begin("Properties", nullptr, ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize))
+            {
+                if (ImGui::CollapsingHeader("Cube"))
+                    cube.transform.ImGuiDebug();
+
+                if (ImGui::CollapsingHeader("Camera"))
+                    camera.transform.ImGuiDebug();
+
+                if (ImGui::Button("QUIT"))
+                    glfwSetWindowShouldClose(window, true);
+            }
+            ImGui::End();
+
+            ImGui::Render();
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
             glfwSwapBuffers(window);
         }
     }
 
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
     glfwTerminate();
 
     return 0;
@@ -164,11 +211,8 @@ void framebufferSizeCallback(GLFWwindow *window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
-void processInput(GLFWwindow *window, Camera &camera, float deltaTime)
+void processInput(GLFWwindow *window, WindowUserData &userData, float deltaTime)
 {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
-
     float moveSpeed = 5.0f;
     glm::vec2 moveDirection = glm::vec2(0.0f);
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
@@ -182,12 +226,23 @@ void processInput(GLFWwindow *window, Camera &camera, float deltaTime)
 
     glm::vec3 movement = glm::vec3(moveDirection.x, 0.0f, -moveDirection.y) * moveSpeed * deltaTime;
 
+    Camera &camera = userData.camera;
     camera.transform.position += camera.transform.rotation * movement;
+
+    double xPos, yPos;
+    glfwGetCursorPos(window, &xPos, &yPos);
 }
 
 void mouse_callback(GLFWwindow *window, double xPos, double yPos)
 {
     WindowUserData *userData = (WindowUserData *)glfwGetWindowUserPointer(window);
+
+    if (userData->propertiesShown)
+    {
+        userData->hasLastCursorPosition = false;
+        ImGui_ImplGlfw_CursorPosCallback(window, xPos, yPos);
+        return;
+    }
 
     glm::vec2 currentPosition(
         xPos,
@@ -228,4 +283,26 @@ void scroll_callback(GLFWwindow *window, double xOffset, double yOffset)
         fov = 90.0f;
 
     userData->camera.fov = fov;
+
+    ImGui_ImplGlfw_ScrollCallback(window, xOffset, yOffset);
+}
+
+void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
+{
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE)
+    {
+        WindowUserData *userData = (WindowUserData *)glfwGetWindowUserPointer(window);
+
+        userData->propertiesShown = !userData->propertiesShown;
+        if (userData->propertiesShown)
+        {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        }
+        else
+        {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        }
+    }
+
+    ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
 }
