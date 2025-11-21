@@ -20,9 +20,8 @@ add_subdirectory(vendor/stb)
 add_subdirectory(vendor/glm)
 
 # Imgui
-set(IMGUI_PATH  "vendor/imgui")
+set(IMGUI_PATH          "${CMAKE_SOURCE_DIR}/vendor/imgui")
+set(IMGUI_BACKENDS_PATH "${IMGUI_PATH}/backends")
 file(GLOB IMGUI_SOURCES ${IMGUI_PATH}/*.cpp) 
-add_library(imgui STATIC ${IMGUI_SOURCES})
-target_include_directories(imgui PUBLIC ${IMGUI_PATH})
 
 add_subdirectory(src)

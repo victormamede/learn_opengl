@@ -3,18 +3,17 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 
-#include "shader.h"
+#include "transform.h"
 
 class Cube
 {
 public:
     Cube();
-    Cube(glm::mat4 transform);
     ~Cube();
 
-    void draw(Shader &shader) const;
+    void draw() const;
 
-    glm::mat4 Transform;
+    Transform transform;
 
 private:
     GLuint _vao;

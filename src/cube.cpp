@@ -1,10 +1,6 @@
 #include "cube.h"
 
-Cube::Cube() : Cube::Cube(glm::mat4(1.0f))
-{
-}
-
-Cube::Cube(glm::mat4 transform) : Transform(transform)
+Cube::Cube() : transform()
 {
     glGenVertexArrays(1, &_vao);
     glBindVertexArray(_vao);
@@ -74,10 +70,8 @@ Cube::~Cube()
     glDeleteVertexArrays(1, &_vao);
 }
 
-void Cube::draw(Shader &shader) const
+void Cube::draw() const
 {
-    shader.setUniform("model", Transform);
-
     glBindVertexArray(_vao);
     glDrawArrays(GL_TRIANGLES, 0, 36);
 

@@ -11,15 +11,24 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
-
 #include "shader.h"
 #include "cube.h"
+#include "camera.h"
 
 void framebufferSizeCallback(GLFWwindow *window, int width, int height);
-void processInput(GLFWwindow *window);
+void processInput(GLFWwindow *window, Camera &camera, float deltaTime);
+void mouse_callback(GLFWwindow *window, double xPos, double yPos);
+void scroll_callback(GLFWwindow *window, double xOffset, double yOffset);
+
+struct WindowUserData
+{
+    WindowUserData(glm::vec2 &pos, Camera &cam)
+        : camera(cam), hasLastCursorPosition(false) {}
+
+    bool hasLastCursorPosition;
+    glm::vec2 lastCursorPosition;
+    Camera &camera;
+};
 
 int main()
 {
@@ -49,18 +58,7 @@ int main()
     glViewport(0, 0, 800, 600);
     glEnable(GL_DEPTH_TEST);
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
-
-    // Setup Dear ImGui context
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO &io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // IF using Docking Branch
-
-    // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOpenGL(window, true); // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
-    ImGui_ImplOpenGL3_Init();
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     Shader shader("./shaders/vertex.vs", "./shaders/fragment.fs");
 
@@ -100,73 +98,64 @@ int main()
     }
     stbi_image_free(data);
 
-    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-    while (!glfwWindowShouldClose(window))
     {
-        glfwPollEvents();
-        processInput(window);
+        Cube cube;
+        Camera camera{
+            .screenSize = glm::vec2(800.0f, 600.0f),
+            .fov = 70.0f};
 
-        // Render
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        camera.transform.position =
+            glm::vec3(0.0f, 0.0f, 3.0f);
 
-        shader.use();
-        float timeValue = glfwGetTime();
-        shader.setUniform("texture1", 0);
-        shader.setUniform("texture2", 1);
+        glm::vec2 lastCursorPosition;
 
-        glm::mat4 view = glm::mat4(1.0f);
-        view = glm::translate(view, glm::vec3(glm::cos(timeValue), glm::sin(timeValue), -3.0f));
-        shader.setUniform("view", view);
+        WindowUserData userData(lastCursorPosition, camera);
 
-        glm::mat4 projection;
-        projection = glm::perspective(glm::radians(70.0f), 800.0f / 600.0f, 0.1f, 100.0f);
-        shader.setUniform("projection", projection);
+        glfwSetWindowUserPointer(window, &userData);
+        glfwSetCursorPosCallback(window, mouse_callback);
+        glfwSetScrollCallback(window, scroll_callback);
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, textures[0]);
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        float lastFrame = glfwGetTime();
 
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, textures[1]);
+        glm::quat rotation = glm::angleAxis(glm::radians(90.0f), cube.transform.up());
+        cube.transform.rotation *= rotation;
 
-        const std::array<glm::vec3, 10> cubePositions = {
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(2.0f, 5.0f, -15.0f),
-            glm::vec3(-1.5f, -2.2f, -2.5f),
-            glm::vec3(-3.8f, -2.0f, -12.3f),
-            glm::vec3(2.4f, -0.4f, -3.5f),
-            glm::vec3(-1.7f, 3.0f, -7.5f),
-            glm::vec3(1.3f, -2.0f, -2.5f),
-            glm::vec3(1.5f, 2.0f, -2.5f),
-            glm::vec3(1.5f, 0.2f, -1.5f),
-            glm::vec3(-1.3f, 1.0f, -1.5f)};
-
-        for (unsigned int i = 0; i < 10; i++)
+        while (!glfwWindowShouldClose(window))
         {
-            glm::mat4 model = glm::mat4(1.0f);
-            model = glm::translate(model, cubePositions[i]);
-            float angle = 20.0f * i;
-            model = glm::rotate(model, timeValue * glm::radians(100.0f), glm::vec3(1.0f, 1.0f, 0.0f));
-            model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+            // Calculate deltaTime
+            float currentFrame = glfwGetTime();
+            float deltaTime = currentFrame - lastFrame;
+            lastFrame = currentFrame;
 
-            Cube cube(model);
-            cube.draw(shader);
+            glfwPollEvents();
+            processInput(window, camera, deltaTime);
+
+            // Render
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            shader.use();
+            shader.setUniform("texture1", 0);
+            shader.setUniform("texture2", 1);
+
+            shader.setUniform("view", camera.getViewMatrix());
+            shader.setUniform("projection", camera.getProjectionMatrix());
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, textures[0]);
+
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, textures[1]);
+
+            shader.setUniform("model", cube.transform.getMatrix());
+            cube.draw();
+
+            glfwSwapBuffers(window);
         }
-
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-        ImGui::ShowDemoWindow();
-
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-        glfwSwapBuffers(window);
     }
 
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
     glfwTerminate();
+
     return 0;
 }
 
@@ -175,8 +164,68 @@ void framebufferSizeCallback(GLFWwindow *window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
-void processInput(GLFWwindow *window)
+void processInput(GLFWwindow *window, Camera &camera, float deltaTime)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
+
+    float moveSpeed = 5.0f;
+    glm::vec2 moveDirection = glm::vec2(0.0f);
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        moveDirection.y += 1.0f;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        moveDirection.y -= 1.0f;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        moveDirection.x += 1.0f;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        moveDirection.x -= 1.0f;
+
+    glm::vec3 movement = glm::vec3(moveDirection.x, 0.0f, -moveDirection.y) * moveSpeed * deltaTime;
+
+    camera.transform.position += camera.transform.rotation * movement;
+}
+
+void mouse_callback(GLFWwindow *window, double xPos, double yPos)
+{
+    WindowUserData *userData = (WindowUserData *)glfwGetWindowUserPointer(window);
+
+    glm::vec2 currentPosition(
+        xPos,
+        yPos);
+
+    if (!userData->hasLastCursorPosition)
+    {
+        userData->lastCursorPosition = currentPosition;
+        userData->hasLastCursorPosition = true;
+    }
+    glm::vec2 delta = currentPosition - userData->lastCursorPosition;
+    userData->lastCursorPosition = currentPosition;
+
+    float sensitivity = 0.01f;
+
+    glm::vec3 right = userData->camera.transform.right();
+
+    userData->camera.transform.rotation = glm::angleAxis(
+                                              -delta.x * sensitivity,
+                                              glm::vec3(0.0f, 1.0f, 0.0f)) *
+                                          userData->camera.transform.rotation;
+
+    userData->camera.transform.rotation *= glm::angleAxis(
+        -delta.y * sensitivity,
+        glm::vec3(1.0f, 0.0f, 0.0f));
+}
+
+void scroll_callback(GLFWwindow *window, double xOffset, double yOffset)
+{
+    WindowUserData *userData = (WindowUserData *)glfwGetWindowUserPointer(window);
+
+    float fov = userData->camera.fov;
+
+    fov -= (float)yOffset;
+    if (fov < 1.0f)
+        fov = 1.0f;
+    if (fov > 90.0f)
+        fov = 90.0f;
+
+    userData->camera.fov = fov;
 }
