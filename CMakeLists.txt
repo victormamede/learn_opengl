@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 project(LearnOpenGL LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 23)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
@@ -24,4 +25,5 @@ set(IMGUI_PATH          "${CMAKE_SOURCE_DIR}/vendor/imgui")
 set(IMGUI_BACKENDS_PATH "${IMGUI_PATH}/backends")
 file(GLOB IMGUI_SOURCES ${IMGUI_PATH}/*.cpp) 
 
-add_subdirectory(src)
+add_subdirectory(engine)
+add_subdirectory(game)

@@ -12,19 +12,20 @@
 class Shader
 {
 public:
-    // the program ID
-    GLuint ID;
-
-    // constructor reads and builds the shader
+    Shader() = delete;
     Shader(const char *vertexPath, const char *fragmentPath);
+    ~Shader();
 
-    // use/activate the shader
-    void use();
+    void use() const;
 
-    // utility uniform functions
     void setUniform(const std::string &name, bool value) const;
     void setUniform(const std::string &name, int value) const;
     void setUniform(const std::string &name, float value) const;
+    void setUniform(const std::string &name, float x, float y, float z) const;
+    void setUniform(const std::string &name, const glm::vec3 &val) const;
     void setUniform(const std::string &name, float x, float y, float z, float w) const;
     void setUniform(const std::string &name, const glm::mat4 &matrix) const;
+
+private:
+    GLuint _id;
 };

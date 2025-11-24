@@ -12,11 +12,13 @@ public:
     glm::quat rotation;
     glm::vec3 scale;
 
+    glm::vec3 eulerAngles;
+
     glm::mat4 getMatrix() const;
 
     glm::vec3 forward() const;
     glm::vec3 up() const;
     glm::vec3 right() const;
 
-    void ImGuiDebug();
+    void imguiDraw();
 };
