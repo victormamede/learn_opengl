@@ -8,3 +8,6 @@
 	path = vendor/imgui
 	url = git@github.com:ocornut/imgui.git
 	branch = docking
+[submodule "vendor/assimp"]
+	path = vendor/assimp
+	url = https://github.com/assimp/assimp.git
