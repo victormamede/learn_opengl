@@ -4,7 +4,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-Texture::Texture(const char *imagePath)
+Texture::Texture(const std::string imagePath, TextureType type) : type(type)
 {
     glGenTextures(1, &_id);
 
@@ -19,8 +19,8 @@ Texture::Texture(const char *imagePath)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    stbi_set_flip_vertically_on_load(true);
-    unsigned char *data = stbi_load(imagePath, &width, &height, &nrChannels, 0);
+    stbi_set_flip_vertically_on_load(false);
+    unsigned char *data = stbi_load(imagePath.c_str(), &width, &height, &nrChannels, 0);
     if (data)
     {
         GLenum format = GL_RGB;
@@ -40,6 +40,26 @@ Texture::Texture(const char *imagePath)
     }
 
     stbi_image_free(data);
+}
+
+Texture::Texture(Texture &&other) noexcept
+{
+    _id = other._id;
+    type = other.type;
+
+    other._id = 0;
+}
+
+Texture &Texture::operator=(Texture &&other) noexcept
+{
+    if (this == &other)
+        return *this;
+
+    _id = other._id;
+    type = other.type;
+
+    other._id = 0;
+    return *this;
 }
 
 Texture::~Texture()

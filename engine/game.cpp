@@ -153,7 +153,7 @@ void Game::imguiRender() const
     ImGui::NewFrame();
 
     ImGui::SetNextWindowSizeConstraints(ImVec2(300.0f, 200.0f), ImVec2(FLT_MAX, FLT_MAX));
-    if (ImGui::Begin("Properties", nullptr, ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize))
+    if (ImGui::Begin("Properties", nullptr, ImGuiWindowFlags_NoSavedSettings))
     {
 
         for (const std::unique_ptr<Object> &object : _objects)

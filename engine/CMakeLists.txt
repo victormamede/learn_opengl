@@ -16,8 +16,8 @@ add_library(engine STATIC
   texture.cpp
 )
 
-target_link_libraries(engine PRIVATE stb_image glm::glm ${X11_LIBRARIES})
-target_link_libraries(engine PUBLIC glfw glad glm::glm)
+target_link_libraries(engine PRIVATE stb_image ${X11_LIBRARIES} z)
+target_link_libraries(engine PUBLIC glfw glad glm::glm assimp::assimp)
 target_include_directories(engine PRIVATE 
   ${IMGUI_BACKENDS_PATH}
 )

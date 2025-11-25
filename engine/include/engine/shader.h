@@ -13,6 +13,8 @@ class Shader
 {
 public:
     Shader() = delete;
+    Shader(const Shader &) = delete;
+    Shader &operator=(const Shader &) = delete;
     Shader(const char *vertexPath, const char *fragmentPath);
     ~Shader();
 

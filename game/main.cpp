@@ -42,7 +42,44 @@ private:
 
         material->setUniforms(*shader);
 
-        mesh->draw();
+        mesh->draw(*shader);
+    }
+};
+
+class ModelRenderer : public Object
+{
+public:
+    std::shared_ptr<Model> model;
+    std::shared_ptr<Material> material;
+    std::shared_ptr<Shader> shader;
+
+private:
+    void update(float deltaTime) override
+    {
+        // transform.rotation *= glm::angleAxis(deltaTime, glm::vec3(0.5f, 1.0f, 0.2f));
+        transform.rotation = glm::normalize(transform.rotation);
+    }
+
+    void draw() const override
+    {
+        Game &game = getGame();
+        assert(game.activeCamera != nullptr);
+
+        shader->use();
+
+        game.activeCamera->setUniforms(*shader);
+
+        Light::resetCounters();
+        for (Light *light : game.lights)
+            light->setUniforms(*shader);
+
+        const glm::mat4 &modelMatrix = transform.getMatrix();
+        shader->setUniform("model", modelMatrix);
+        shader->setUniform("normalMatrix", glm::transpose(glm::inverse(modelMatrix)));
+
+        material->setUniforms(*shader);
+
+        model->draw(*shader);
     }
 };
 
@@ -97,7 +134,7 @@ private:
 
         material->setUniforms(*shader);
 
-        mesh->draw();
+        mesh->draw(*shader);
 
         Transform arrowHead = transform;
         arrowHead.position += arrowHead.forward() * 0.3f;
@@ -107,7 +144,7 @@ private:
         shader->setUniform("model", arrowHeadMatrix);
         shader->setUniform("normalMatrix", glm::transpose(glm::inverse(arrowHeadMatrix)));
 
-        mesh->draw();
+        mesh->draw(*shader);
     }
 };
 
@@ -118,8 +155,12 @@ int main()
         std::shared_ptr<Shader> shader = std::make_shared<Shader>("./shaders/vertex.vs", "./shaders/fragment.fs");
         std::shared_ptr<Mesh> cubeMesh = std::make_shared<Mesh>(cubeVertices, cubeIndices);
         std::shared_ptr<Mesh> planeMesh = std::make_shared<Mesh>(planeVertices, planeIndices);
-        std::shared_ptr<Texture> containerTexture = std::make_shared<Texture>("./textures/container.png");
-        std::shared_ptr<Texture> containerSpecularTexture = std::make_shared<Texture>("./textures/container_specular.png");
+        std::shared_ptr<Model> suzanneModel = std::make_shared<Model>("./assets/suzanne.glb");
+        std::shared_ptr<Model> girlModel = std::make_shared<Model>("./assets/girl/scene.gltf");
+        std::shared_ptr<Model> justAGirlModel = std::make_shared<Model>("./assets/just_a_girl/scene.gltf");
+        std::shared_ptr<Model> shibaModel = std::make_shared<Model>("./assets/shiba/scene.gltf");
+        std::shared_ptr<Texture> containerTexture = std::make_shared<Texture>("./textures/container.png", TextureType::SPECULAR);
+        std::shared_ptr<Texture> containerSpecularTexture = std::make_shared<Texture>("./textures/container_specular.png", TextureType::SPECULAR);
 
         // Camera
         std::unique_ptr<FreelookCamera> camera = std::make_unique<FreelookCamera>();
@@ -147,34 +188,67 @@ int main()
         plane->transform.scale = glm::vec3(50.0f);
         game.addObject(std::move(plane));
 
-        // Cube
-        std::unique_ptr<Cube> baseCube = std::make_unique<Cube>();
-        baseCube->material = std::make_shared<Material>(
-            Material{
-                .specular = glm::vec3(1.0f),
-                .shininess = 1.0f,
-                .diffuseMap = containerTexture,
-                .specularMap = containerSpecularTexture,
-            });
+        {
+            std::unique_ptr<ModelRenderer> suzanne = std::make_unique<ModelRenderer>();
+            suzanne->material = std::make_shared<Material>(
+                Material{
+                    .shininess = 1.0f,
+                });
 
-        baseCube->mesh = cubeMesh;
-        baseCube->shader = shader;
-        baseCube->transform.position = glm::vec3(-1.0f, 0.25f, 0.0f);
-        baseCube->transform.scale = glm::vec3(0.5f);
-        game.addObject(std::move(baseCube));
+            suzanne->model = girlModel;
+            suzanne->shader = shader;
+            suzanne->transform.position = glm::vec3(1.5f, 0.25f, 0.0f);
+            suzanne->transform.rotation = glm::quat(glm::vec3(glm::pi<float>() / 2.0f, 0.0f, 0.0f));
+            suzanne->transform.scale = glm::vec3(2.0f);
+            game.addObject(std::move(suzanne));
+        }
+
+        {
+            std::unique_ptr<ModelRenderer> suzanne = std::make_unique<ModelRenderer>();
+            suzanne->material = std::make_shared<Material>(
+                Material{
+                    .shininess = 1.0f,
+                });
+
+            suzanne->model = justAGirlModel;
+            suzanne->shader = shader;
+            suzanne->transform.position = glm::vec3(-1.0f, 0.25f, 0.0f);
+            suzanne->transform.rotation = glm::quat(glm::vec3(-glm::pi<float>() / 2.0f, 0.0f, 0.0f));
+            suzanne->transform.scale = glm::vec3(0.02f);
+            game.addObject(std::move(suzanne));
+        }
+
+        {
+            std::unique_ptr<Cube> box = std::make_unique<Cube>();
+            box->material = std::make_shared<Material>(
+                Material{
+                    .specular = glm::vec3(1.0f),
+                    .shininess = 1.0f,
+                    .diffuseMap = containerTexture,
+                    .specularMap = containerSpecularTexture,
+                });
+
+            box->mesh = cubeMesh;
+            box->shader = shader;
+            box->transform.position = glm::vec3(-3.0f, 0.25f, 0.0f);
+            box->transform.rotation = glm::quat(glm::vec3(-glm::pi<float>() / 2.0f, 0.0f, 0.0f));
+            box->transform.scale = glm::vec3(0.25);
+            game.addObject(std::move(box));
+        }
 
         for (int i = 0; i < materials.size(); i++)
         {
             Material &material = materials[i];
 
-            std::unique_ptr<Cube> cube = std::make_unique<Cube>();
+            std::unique_ptr<ModelRenderer> cube = std::make_unique<ModelRenderer>();
 
             int x = i % 4;
             int y = i / 4;
 
+            cube->transform.rotation = glm::quat(glm::vec3(-glm::pi<float>() / 2.0f, 0.0f, 0.0f));
             cube->material = std::make_shared<Material>(material);
             cube->objectName = material.name;
-            cube->mesh = cubeMesh;
+            cube->model = shibaModel;
             cube->shader = shader;
             cube->transform.scale = glm::vec3(0.25f);
             cube->transform.position = glm::vec3((float)x, 0.0f, (float)y);
