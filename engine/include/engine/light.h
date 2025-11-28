@@ -12,7 +12,7 @@ class Light : public Object
 public:
     virtual ~Light() = default;
 
-    void onStart() override;
+    void onNotification(Notification type) override;
 
     glm::vec3 ambient = glm::vec3(0.0f);
     glm::vec3 diffuse = glm::vec3(0.0f);

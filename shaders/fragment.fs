@@ -47,7 +47,7 @@ struct SpotLight {
 struct Material {
     vec3 ambient;
 
-    vec3 diffuse;
+    vec4 diffuse;
     sampler2D diffuseMap;
 
     float shininess;
@@ -80,6 +80,10 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 viewDir);
 void main()
 {
     vec3 outColor = vec3(0.0);
+    vec4 textureDiffuse = texture(material.diffuseMap, TexCoord);
+    if(textureDiffuse.a <= 0.1) {
+        discard;
+    }
 
     // properties
     vec3 norm = normalize(Normal);
@@ -95,12 +99,12 @@ void main()
         result += CalcSpotLight(spotLights[i], norm, viewDir);
 
     vec3 emission = material.emission * vec3(texture(material.emissionMap, TexCoord));
-    FragColor = vec4(result + emission, 1.0);
+    FragColor = vec4(result + emission, textureDiffuse.a);
 }
 
 vec3 CalcDirectionalLight(DirectionalLight light, vec3 normal, vec3 viewDir) {
     vec3 lightDir = normalize(-light.direction);
-    vec3 albedo = material.diffuse * vec3(texture(material.diffuseMap, TexCoord));
+    vec3 albedo = material.diffuse.rgb * texture(material.diffuseMap, TexCoord).rgb;
     vec3 specularFactor = material.specular * vec3(texture(material.specularMap, TexCoord));
 
     // ambient shading
@@ -122,7 +126,7 @@ vec3 CalcDirectionalLight(DirectionalLight light, vec3 normal, vec3 viewDir) {
 
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 viewDir) {
     vec3 lightDir = normalize(light.position - FragPos);
-    vec3 albedo = material.diffuse * vec3(texture(material.diffuseMap, TexCoord));
+    vec3 albedo = material.diffuse.rgb * texture(material.diffuseMap, TexCoord).rgb;
     vec3 specularFactor = material.specular * vec3(texture(material.specularMap, TexCoord));
 
     // attenuation
@@ -157,7 +161,7 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 viewDir) {
         return vec3(0.0);
     }
 
-    vec3 albedo = material.diffuse * vec3(texture(material.diffuseMap, TexCoord));
+    vec3 albedo = material.diffuse.rgb * texture(material.diffuseMap, TexCoord).rgb;
     vec3 specularFactor = material.specular * vec3(texture(material.specularMap, TexCoord));
 
     // attenuation

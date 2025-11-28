@@ -1,11 +1,33 @@
 #include <engine/camera.h>
 #include <engine/game.h>
 
-void Camera::onStart()
+void Camera::onNotification(Notification type)
+{
+    switch (type)
+    {
+    case Notification::START:
+        setActive(); // TODO: check if current active camera is null in game
+        updateProjection();
+        break;
+
+    case Notification::SCREEN:
+        updateProjection();
+        break;
+    }
+}
+
+void Camera::setActive()
 {
     Game &game = getGame();
-    if (game.activeCamera == nullptr)
-        game.activeCamera = this;
+    game.activeCamera = this;
+}
+
+void Camera::updateProjection()
+{
+    Game &game = getGame();
+    const glm::vec2 &screenSize = game.getScreenSize();
+
+    projection = glm::perspective(glm::radians(fov), screenSize.x / screenSize.y, 0.1f, 100.0f);
 }
 
 glm::mat4 Camera::getViewMatrix() const
@@ -15,9 +37,6 @@ glm::mat4 Camera::getViewMatrix() const
 
 glm::mat4 Camera::getProjectionMatrix() const
 {
-    glm::mat4 projection;
-    projection = glm::perspective(glm::radians(fov), screenSize.x / screenSize.y, 0.1f, 100.0f);
-
     return projection;
 }
 

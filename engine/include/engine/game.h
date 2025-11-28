@@ -6,12 +6,30 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#define SCREEN_HEIGHT 900
-#define SCREEN_WIDTH 1200
+#include <glm/glm.hpp>
 
 class Object;
 class Camera;
 class Light;
+
+struct MouseMove
+{
+    double prevXPos;
+    double prevYPos;
+
+    double xPos;
+    double yPos;
+
+    glm::vec2 delta;
+};
+
+struct KeyInput
+{
+    int key;
+    int scancode;
+    int action;
+    int mods;
+};
 
 class Game
 {
@@ -26,6 +44,10 @@ public:
     void setCursorMode(int value) const;
 
     float getTime() const;
+    float getDeltaTime() const;
+    const KeyInput &getKeyInput() const;
+    const MouseMove &getMouseMove() const;
+    const glm::vec2 &getScreenSize() const;
 
     Camera *activeCamera = nullptr;
     std::vector<Light *> lights;
@@ -34,7 +56,12 @@ private:
     bool initialized = false;
     GLFWwindow *_window = nullptr;
     GLuint _whiteTexture;
+
     float _time = 0.0f;
+    float _deltaTime = 0.0f;
+    KeyInput _keyInput = {0};
+    MouseMove _mouseMove = {0};
+    glm::vec2 _screenSize = glm::vec2(800.0f, 600.0f);
 
     std::vector<std::unique_ptr<Object>> _objects;
 

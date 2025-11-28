@@ -3,17 +3,41 @@
 #include <engine/game.h>
 #include <GLFW/glfw3.h>
 
+void FreelookCamera::onNotification(Notification type)
+{
+    Camera::onNotification(type);
+
+    switch (type)
+    {
+    case Notification::START:
+        onStart();
+        break;
+    case Notification::UPDATE:
+        update();
+        break;
+
+    case Notification::MOUSE_MOVE:
+        mouseInput();
+        break;
+
+    case Notification::KEY_INPUT:
+        keyInput();
+        break;
+    }
+}
+
 void FreelookCamera::onStart()
 {
     Game &game = getGame();
     game.setCursorMode(GLFW_CURSOR_DISABLED);
 
     updateRotation();
-    Camera::onStart();
 }
 
-void FreelookCamera::update(float deltaTime)
+void FreelookCamera::update()
 {
+    float deltaTime = getGame().getDeltaTime();
+
     if (_isPaused)
         return;
 
@@ -45,31 +69,20 @@ void FreelookCamera::update(float deltaTime)
     transform.position += movement * deltaTime;
 }
 
-void FreelookCamera::mouseInput(double xPos, double yPos)
+void FreelookCamera::mouseInput()
 {
+    const MouseMove &mouseMove = getGame().getMouseMove();
     if (_isPaused)
         return;
-
-    glm::vec2 currentPosition(
-        xPos,
-        yPos);
-
-    if (!_hasPrevLocation)
-    {
-        _prevLocation = currentPosition;
-        _hasPrevLocation = true;
-    }
-    glm::vec2 delta = currentPosition - _prevLocation;
-    _prevLocation = currentPosition;
 
     float sensitivity = 0.01f;
 
     glm::vec3 right = transform.right();
 
-    _lookRotation.x += delta.x * sensitivity;
+    _lookRotation.x += mouseMove.delta.x * sensitivity;
     _lookRotation.x = glm::mod(_lookRotation.x, glm::radians(360.0f));
 
-    _lookRotation.y += delta.y * sensitivity;
+    _lookRotation.y += mouseMove.delta.y * sensitivity;
     _lookRotation.y = glm::clamp(_lookRotation.y, glm::radians(-89.0f), glm::radians(89.0f));
 
     updateRotation();
@@ -89,9 +102,14 @@ void FreelookCamera::updateRotation()
 }
 
 inline void handleKey(bool &result, int action);
-void FreelookCamera::keyInput(int key, int scancode, int action, int mods)
+void FreelookCamera::keyInput()
 {
-    switch (key)
+    Game &game = getGame();
+    const KeyInput &keyInput = game.getKeyInput();
+
+    int action = keyInput.action;
+
+    switch (keyInput.key)
     {
     case GLFW_KEY_W:
         handleKey(_input.forward, action);
@@ -119,8 +137,6 @@ void FreelookCamera::keyInput(int key, int scancode, int action, int mods)
         if (action == GLFW_RELEASE)
         {
             _isPaused = !_isPaused;
-            _hasPrevLocation = false;
-            Game &game = getGame();
             if (_isPaused)
                 game.setCursorMode(GLFW_CURSOR_NORMAL);
             else

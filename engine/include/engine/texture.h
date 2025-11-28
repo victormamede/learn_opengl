@@ -16,7 +16,7 @@ public:
     Texture() = delete;
     Texture(const Texture &) = delete;
     Texture &operator=(const Texture &) = delete;
-    Texture(const std::string imagePath, TextureType type);
+    Texture(const std::string imagePath, TextureType type, bool wrap = true);
     Texture(Texture &&) noexcept;
     Texture &operator=(Texture &&) noexcept;
     ~Texture();

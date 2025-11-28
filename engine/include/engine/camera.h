@@ -6,14 +6,17 @@
 class Camera : public Object
 {
 public:
-    void onStart() override;
-
-    glm::vec2 screenSize;
+    void onNotification(Notification type) override;
 
     float fov;
+    glm::mat4 projection;
 
     glm::mat4 getViewMatrix() const;
     glm::mat4 getProjectionMatrix() const;
 
     void setUniforms(Shader &shader) const;
+    void setActive();
+
+private:
+    void updateProjection();
 };

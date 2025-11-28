@@ -15,18 +15,18 @@ struct Input
 
 class FreelookCamera : public Camera
 {
+    void onNotification(Notification type) override;
+
 private:
     bool _isPaused = false;
     glm::vec2 _lookRotation = glm::vec3(0.0f);
 
-    bool _hasPrevLocation = false;
-    glm::vec2 _prevLocation;
     Input _input;
 
     void updateRotation();
 
-    void onStart() override;
-    void update(float deltaTime) override;
-    void mouseInput(double xPos, double yPos) override;
-    void keyInput(int key, int scancode, int action, int mods) override;
+    void onStart();
+    void update();
+    void mouseInput();
+    void keyInput();
 };

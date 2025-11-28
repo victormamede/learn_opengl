@@ -51,6 +51,13 @@ Mesh::~Mesh()
 
 void Mesh::draw(const Shader &shader) const
 {
+    bool culled = false;
+    if (!cullFaces)
+    {
+        glDisable(GL_CULL_FACE);
+        culled = true;
+    }
+
     for (int i = 0; i < _textures.size(); i++)
     {
         const Texture &texture = _textures[i];
@@ -71,6 +78,10 @@ void Mesh::draw(const Shader &shader) const
     glDrawElements(GL_TRIANGLES, _indicesCount, GL_UNSIGNED_INT, 0);
 
     glBindVertexArray(0);
+
+    // Re enable for next render
+    if (culled)
+        glEnable(GL_CULL_FACE);
 }
 
 Model::Model(const std::string &path)

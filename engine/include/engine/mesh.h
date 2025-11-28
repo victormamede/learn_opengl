@@ -32,6 +32,8 @@ public:
          std::vector<Texture> textures);
     ~Mesh();
 
+    bool cullFaces = true;
+
     void draw(const Shader &shader) const;
 
 private:

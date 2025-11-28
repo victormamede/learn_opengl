@@ -2,10 +2,15 @@
 #include <engine/game.h>
 #include <format>
 
-void Light::onStart()
+void Light::onNotification(Notification type)
 {
-    Game &game = getGame();
-    game.lights.push_back(this);
+    switch (type)
+    {
+    case Notification::START:
+        Game &game = getGame();
+        game.lights.push_back(this);
+        break;
+    }
 }
 
 void Light::setUniforms(Shader &shader) const

@@ -16,7 +16,7 @@ Game::Game()
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // Create window
-    _window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "LearnOpenGL", NULL, NULL);
+    _window = glfwCreateWindow(_screenSize.x, _screenSize.y, "LearnOpenGL", NULL, NULL);
     if (_window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -31,9 +31,18 @@ Game::Game()
         return;
     }
 
-    glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    glEnable(GL_DEPTH_TEST);
+    glViewport(0, 0, _screenSize.x, _screenSize.y);
     glfwSetFramebufferSizeCallback(_window, framebufferSizeCallback);
+    glfwWindowHint(GLFW_SAMPLES, 4);
+
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glEnable(GL_MULTISAMPLE);
+    glEnable(GL_DEPTH_TEST);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -80,6 +89,9 @@ Game::Game()
     initialized = true;
 
     glActiveTexture(GL_TEXTURE0);
+
+    // Show a black screen waiting for run()
+    render();
 }
 
 void Game::clear()
@@ -111,13 +123,13 @@ void Game::run()
     {
         // Calculate deltaTime
         _time = glfwGetTime();
-        float deltaTime = _time - lastFrame;
+        _deltaTime = _time - lastFrame;
         lastFrame = _time;
 
         glfwPollEvents();
 
         for (const std::unique_ptr<Object> &object : _objects)
-            object->update(deltaTime);
+            object->notification(Notification::UPDATE);
 
         render();
     }
@@ -125,24 +137,27 @@ void Game::run()
 
 void Game::render() const
 {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
+    glStencilMask(0x00);
     for (const std::unique_ptr<Object> &object : _objects)
-        object->draw();
+        object->notification(Notification::DRAW);
 
     imguiRender();
 
     glfwSwapBuffers(_window);
 }
 
-float Game::getTime() const
-{
-    return _time;
-}
+float Game::getTime() const { return _time; }
+float Game::getDeltaTime() const { return _deltaTime; }
+const KeyInput &Game::getKeyInput() const { return _keyInput; }
+const MouseMove &Game::getMouseMove() const { return _mouseMove; }
+const glm::vec2 &Game::getScreenSize() const { return _screenSize; }
 
 void Game::addObject(std::unique_ptr<Object> object)
 {
     object->init(*this);
+    object->notification(Notification::START);
     _objects.push_back(std::move(object));
 }
 
@@ -155,9 +170,12 @@ void Game::imguiRender() const
     ImGui::SetNextWindowSizeConstraints(ImVec2(300.0f, 200.0f), ImVec2(FLT_MAX, FLT_MAX));
     if (ImGui::Begin("Properties", nullptr, ImGuiWindowFlags_NoSavedSettings))
     {
+        ImGui::Text("Mouse pos: %0.f, %0.f", _mouseMove.xPos, _mouseMove.yPos);
+        ImGui::Text("Mouse delta: %0.f, %0.f", _mouseMove.delta.x, _mouseMove.delta.y);
+        ImGui::Text("Key input: key %0d, action %0d", _keyInput.key, _keyInput.action);
 
         for (const std::unique_ptr<Object> &object : _objects)
-            object->imguiDraw();
+            object->notification(Notification::IMGUI_DRAW);
 
         if (ImGui::Button("QUIT"))
             glfwSetWindowShouldClose(_window, true);
@@ -186,23 +204,45 @@ void Game::registerCallbacks()
 
 void Game::framebufferSizeCallback(GLFWwindow *window, int width, int height)
 {
+    Game *game = (Game *)glfwGetWindowUserPointer(window);
+    game->_screenSize.x = (float)width;
+    game->_screenSize.y = (float)height;
+
+    for (const std::unique_ptr<Object> &object : game->_objects)
+        object->notification(Notification::SCREEN);
+
     glViewport(0, 0, width, height);
 }
 
 void Game::keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
     Game *game = (Game *)glfwGetWindowUserPointer(window);
-
+    game->_keyInput = {key, scancode, action, mods};
     for (const std::unique_ptr<Object> &object : game->_objects)
-        object->keyInput(key, scancode, action, mods);
+        object->notification(Notification::KEY_INPUT);
 }
 
 void Game::mouseCallback(GLFWwindow *window, double xPos, double yPos)
 {
     Game *game = (Game *)glfwGetWindowUserPointer(window);
 
+    double prevXPos = game->_mouseMove.xPos;
+    double prevYPos = game->_mouseMove.yPos;
+
+    glm::vec2 delta = glm::vec2(
+        xPos - prevXPos,
+        yPos - prevYPos);
+
+    game->_mouseMove = {
+        prevXPos,
+        prevYPos,
+        xPos,
+        yPos,
+        delta,
+    };
+
     for (const std::unique_ptr<Object> &object : game->_objects)
-        object->mouseInput(xPos, yPos);
+        object->notification(Notification::MOUSE_MOVE);
 }
 
 void Game::mouseButtonCallback(GLFWwindow *window, int button, int action, int mods)

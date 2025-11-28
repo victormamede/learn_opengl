@@ -3,11 +3,23 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <memory>
+#include <variant>
 #include <string>
 
 #include "transform.h"
 
 class Game;
+
+enum Notification
+{
+    START,
+    UPDATE,
+    DRAW,
+    IMGUI_DRAW,
+    KEY_INPUT,
+    MOUSE_MOVE,
+    SCREEN,
+};
 
 class Object
 {
@@ -20,19 +32,10 @@ public:
 
     Game &getGame() const;
 
+    void init(Game &game);
+    void notification(Notification type);
+    virtual void onNotification(Notification type);
+
 private:
     Game *_game;
-
-    void init(Game &game);
-    virtual void onStart();
-
-    virtual void update(float deltaTime);
-    virtual void draw() const;
-
-    virtual void mouseInput(double xPos, double yPos);
-    virtual void keyInput(int key, int scancode, int action, int mods);
-
-    virtual void imguiDraw();
-
-    friend class Game;
 };
